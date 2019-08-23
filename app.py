@@ -7,6 +7,8 @@ import tempfile
 import yaml
 import math
 import logging
+from tqdm import tqdm
+import hashlib
 
 def main():
     logging.basicConfig(level=logging.INFO)
@@ -86,24 +88,35 @@ def main():
         input_path = args.INPUT
         output_name = temp_name_format.format(0) + ".jpeg"
         output_path = os.path.join(temp_path, output_name)
-        resize_image(input_path, output_path, width, height)
+        output = resize_image(input_path, output_path, width, height)
+        output_md5 = file_md5(output)
 
+        # Start reesaving
+        quality = get_args_or_default("quality", args, config)
+        max_iterations = get_args_or_default("max_iterations", args, config)
+        for i in tqdm(range(max_iterations)):
+            input = output
+            input_md5 = output_md5
 
+            output_filename = os.path.join(
+                temp_path,
+                temp_name_format.format(i) + ".jpeg")
+            output = resave(input, output_filename, quality)
+            output_md5 = file_md5(output)
 
+            if input_md5 == output_md5:
+                logging.info("Early stop at iteration {:d}".format(i))
+                break
 
-
-    # magick ${input_image} \
-    #     -resize ${max_width}x${max_height}\> \
-    #     -quality 100 \
-    #     ${tmp_dir}/${name}${suffix}.jpeg
-
-
-
-
-
-
+        
 
     return
+
+def get_args_or_default(varname, args, config):
+    if vars(args)[varname] is not None:
+        return vars(args)[varname]
+    else:
+        return config["defaults"][varname]
 
 def get_image_size(path):
     "Identify geometry using ImageMagick."
@@ -161,11 +174,45 @@ def resize_image(input, output, width, height):
         height,
         output)
     logging.debug("Executing " + cmd)
-    subprocess.run([cmd], shell=True)
+    subprocess.run(cmd, shell=True)
+    logging.info("Resized, saved to {:s}".format(output))
 
-    return
+    return output
 
+def resave(input, output, quality):
+    "Save input as PNG then as JPEG with specified quality."
+    filename, _ = os.path.splitext(input)
+    png = filename + ".png"
 
+    cmd = "magick convert {:s} {:s}".format(
+        input,
+        png
+    )
+    subprocess.run(cmd, shell=True)
+    cmd = "magick convert {:s} -quality {:d} {:s}".format(
+        png,
+        quality,
+        output
+    )
+    subprocess.run(cmd, shell=True)
+    logging.debug("Saved to {:s}".format(output))
+
+    # convert ${prev_file} \
+    #     -colorspace CMYK \
+    #     -resize $((${max_width} - ${shrink}))x$((${max_height} - ${shrink})) \
+    #     +antialias \
+    #     ${temp_file}
+    # convert ${temp_file} \
+    #     -colorspace RGB \
+    #     -resize ${max_width}x${max_height} \
+    #     +antialias \
+    #     -quality ${quality} \
+    #     ${new_file}
+
+    return output
+
+def file_md5(path):
+    return hashlib.md5(open(path, "rb").read()).hexdigest()
 
 if __name__ == "__main__":
     main()
