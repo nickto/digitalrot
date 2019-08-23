@@ -6,8 +6,11 @@ import re
 import tempfile
 import yaml
 import math
+import logging
 
 def main():
+    logging.basicConfig(level=logging.INFO)
+
     parser = argparse.ArgumentParser(description='Digitally rot an image.')
 
     parser.add_argument("INPUT",
@@ -68,29 +71,42 @@ def main():
     temp_name_length = len(str(args.max_iterations))
     temp_name_format = "{{:0{:d}d}}".format(temp_name_length)
 
-    temp_dir = tempfile.TemporaryDirectory()
-    temp_path = temp_dir.name
+    with tempfile.TemporaryDirectory() as temp_path:
+        assert os.path.isdir(temp_path)
+        print(subprocess.check_output(["pwd"]))
 
-    # Resize image
-    width, height = get_image_size(args.INPUT)
-    input_path = args.INPUT
-    output_name = temp_name_format.format(0) + ".jpeg"
-    output_path = os.path.join(temp_path, output_name)
-    width, height = get_new_image_size(height, width, config, args)
-    print(width, height)
+        # Resize image
+        width, height = get_image_size(args.INPUT)
+        logging.info("Input image dimensions are {:d} × {:d}".format(width,
+                                                                     height))
+        width, height = get_new_image_size(height, width, config, args)
+        logging.info("Image will be scaled to {:d} × {:d}".format(width,
+                                                                  height))
+
+        input_path = args.INPUT
+        output_name = temp_name_format.format(0) + ".jpeg"
+        output_path = os.path.join(temp_path, output_name)
+        resize_image(input_path, output_path, width, height)
 
 
 
 
 
+    # magick ${input_image} \
+    #     -resize ${max_width}x${max_height}\> \
+    #     -quality 100 \
+    #     ${tmp_dir}/${name}${suffix}.jpeg
 
-    #  temp_dir.cleanup()
+
+
+
+
 
 
     return
 
 def get_image_size(path):
-    # Identify geometry using ImageMagick
+    "Identify geometry using ImageMagick."
     description = subprocess.Popen(
         ["magick", "identify", "-verbose", path],
         stdout=subprocess.PIPE)
@@ -108,6 +124,7 @@ def get_image_size(path):
     return width, height
 
 def get_new_image_size(height, width, config, args):
+    "Get new image size, given max dimensions."
     if args.max_width is None and args.max_height is None:
         # Nothing is specified, read defaults
         max_width = config["defaults"]["max_width"]
@@ -135,8 +152,17 @@ def get_new_image_size(height, width, config, args):
     return width, height
 
 
-def resize_image(input, output):
-    ""
+def resize_image(input, output, width, height):
+    "Resize image using ImageMagick."
+    # \! is needed to ignore aspect ratio
+    cmd = "magick {:s} -resize {:d}x{:d} -quality 100 {:s}".format(
+        input,
+        width,
+        height,
+        output)
+    logging.debug("Executing " + cmd)
+    subprocess.run([cmd], shell=True)
+
     return
 
 
