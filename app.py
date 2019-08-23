@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import os
 import argparse
+import subprocess
+import re
 
 def main():
     parser = argparse.ArgumentParser(description='Digitally rot an image.')
@@ -53,7 +55,27 @@ def main():
 
     args = parser.parse_args()
 
+    width, height = get_image_size(args.INPUT)
     return
+
+def get_image_size(path):
+    # Identify geometry using ImageMagick
+    description = subprocess.Popen(
+            ["magick", "identify", "-verbose", path],
+            stdout=subprocess.PIPE)
+    output = subprocess.check_output(
+            ["grep", "Geometry"], 
+            stdin=description.stdout)
+    description.wait()
+
+    output = output.decode("utf-8")
+    width_regex = re.compile(r"(?<=\s)\d*(?=x)")
+    height_regex = re.compile(r"(?<=x)\d*")
+    width = int(width_regex.findall(output)[0])
+    height = int(height_regex.findall(output)[0])
+
+    return width, height
+
 
 if __name__ == "__main__":
     main()
