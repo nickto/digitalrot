@@ -212,13 +212,14 @@ def resize_image(input, output, width, height):
     return output
 
 def resave(input, output, min_quality, max_quality):
-    "Resave image witg randomly sampled quality."
+    """Resave image witg randomly sampled quality.
+
+    Quality is sampled randomly in an interval to avoid early convergence."""
     filename, _ = os.path.splitext(input)
     png = filename + ".png"
 
     cmd = " ".join([
         "magick convert {:s}".format(input),
-        # "-fill {:s} -draw 'point {:d},{:d}'".format("white" if random.random() > 0.5 else "black", 1, 1),
         "-colorspace {:s}".format("CMYK"),
         "+antialias",
         "-quality {:d}".format(100),
