@@ -9,7 +9,7 @@ import logging
 from tqdm import tqdm
 import hashlib
 import random
-from typing import Dict
+from typing import Dict, Tuple, Union
 
 def rot(input_path: str,
         output_path: str,
@@ -18,7 +18,7 @@ def rot(input_path: str,
         max_quality: int,
         framerate: int = None,
         max_width: int = None,
-        max_height: int = None) -> Dict:
+        max_height: int = None) -> Dict[str, Union[str, int]]:
     """Rot an image and return a rotted image or video of rotting process.
 
     An image is first scaled to match `max_width` and `max_height` as precisely
@@ -113,7 +113,7 @@ def rot(input_path: str,
     }
 
 
-def get_image_size(path):
+def get_image_size(path: str) -> Tuple[int, int]:
     "Identify geometry using ImageMagick."
     description = subprocess.Popen(
         ["magick", "identify", "-verbose", path],
@@ -132,7 +132,10 @@ def get_image_size(path):
     return width, height
 
 
-def get_new_image_size(width, height, max_width=None, max_height=None):
+def get_new_image_size(width: int,
+                       height: int,
+                       max_width: int = None,
+                       max_height: int = None) -> Tuple[int, int]:
     "Get new image size, given max dimensions."
     if max_width is None and max_height is None:
         raise Exception("Either max_width or max_height (or both) should be specified.")
@@ -158,7 +161,7 @@ def get_new_image_size(width, height, max_width=None, max_height=None):
     return width, height
 
 
-def resize_image(input, output, width, height):
+def resize_image(input: str, output: str, width: int, height: int) -> str:
     "Resize image using ImageMagick."
     # \! is needed to ignore aspect ratio
     cmd = " ".join([
@@ -174,7 +177,7 @@ def resize_image(input, output, width, height):
     return output
 
 
-def resave(input, output, min_quality, max_quality):
+def resave(input: str, output: str, min_quality: int, max_quality: int) -> str:
     """Resave image with randomly sampled quality.
 
     Quality is sampled randomly in an interval to avoid early convergence."""
@@ -204,6 +207,6 @@ def resave(input, output, min_quality, max_quality):
     return output
 
 
-def file_md5(path):
+def file_md5(path: str) -> str:
     "Compute MD5 sum of a file."
     return hashlib.md5(open(path, "rb").read()).hexdigest()
