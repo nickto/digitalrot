@@ -108,7 +108,18 @@ def main():
                 logging.info("Early stop at iteration {:d}".format(i))
                 break
 
-        
+        # Video or image?
+        _, extension = os.path.splitext(args.OUTPUT)
+        extension = extension[1:]  # strip leading dot
+        logging.info("Otput extension '{:s}', hence ".format(extension))
+        if extension.lower() in ["jpeg", "jpg", "png", "bmp", "tiff", "tif"]:
+            # Image
+            resave(output, args.OUTPUT, 100)
+        else:
+            # Image
+            raise NotImplementedError()
+
+
 
     return
 
