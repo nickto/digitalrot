@@ -73,9 +73,37 @@ def main():
 
     # Parse arguments
     args = parser.parse_args()
+    # Read in configs
+    with open("./config.yaml", "r") as f:
+        config = yaml.safe_load(f)
 
-    rot(args)
+    framerate = get_args_or_default("framerate", args, config)
+    max_iterations = get_args_or_default("max_iterations", args, config)
+    min_quality = get_args_or_default("min_quality", args, config)
+    max_quality = get_args_or_default("max_quality", args, config)
+    input_path = args.INPUT
+    output_path = args.OUTPUT
+    max_width = args.max_width
+    max_height = args.max_height
+    if max_width is None and max_height is None:
+        max_width = get_args_or_default("max_width", args, config)
+        max_height = get_args_or_default("max_height", args, config)
+
+    rot(input_path,
+        output_path,
+        framerate,
+        max_iterations,
+        min_quality,
+        max_quality,
+        max_width,
+        max_height)
     return
+
+def get_args_or_default(varname, args, config):
+    if vars(args)[varname] is not None:
+        return vars(args)[varname]
+    else:
+        return config["defaults"][varname]
 
 if __name__ == "__main__":
     main()
