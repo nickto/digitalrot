@@ -77,6 +77,7 @@ def main():
     with open("./config.yaml", "r") as f:
         config = yaml.safe_load(f)
 
+    # Set parameter values to command line supplied or defaults
     framerate = get_args_or_default("framerate", args, config)
     max_iterations = get_args_or_default("max_iterations", args, config)
     min_quality = get_args_or_default("min_quality", args, config)
@@ -89,6 +90,7 @@ def main():
         max_width = get_args_or_default("max_width", args, config)
         max_height = get_args_or_default("max_height", args, config)
 
+    # Rot an image
     rot(input_path,
         output_path,
         framerate,
@@ -100,6 +102,7 @@ def main():
     return
 
 def get_args_or_default(varname, args, config):
+    "Return value from args if specified, otherwise read defaults from config."
     if vars(args)[varname] is not None:
         return vars(args)[varname]
     else:
