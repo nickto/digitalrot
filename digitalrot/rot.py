@@ -23,7 +23,8 @@ def rot(input_path: str,
 
     An image is first scaled to match `max_width` and `max_height` as precisely
     as possible, but this is not guranteed because ffmpeg requires video
-    dimensions to be even.
+    dimensions to be even. Note that at least on of `max_width` and `max_height`
+    should be specified.
 
     Then the image is resaved multiple times.
 
