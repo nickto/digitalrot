@@ -93,10 +93,10 @@ def main():
     # Rot an image
     rot(input_path,
         output_path,
-        framerate,
         max_iterations,
         min_quality,
         max_quality,
+        framerate,
         max_width,
         max_height)
     return

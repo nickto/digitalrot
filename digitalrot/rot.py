@@ -10,7 +10,44 @@ from tqdm import tqdm
 import hashlib
 import random
 
-def rot(input_path, output_path, framerate, max_iterations, min_quality, max_quality, max_width=None, max_height=None):
+def rot(input_path: str,
+        output_path: str,
+        max_iterations: int,
+        min_quality: int,
+        max_quality: int,
+        framerate: int = None,
+        max_width: int = None,
+        max_height: int = None):
+    """Rot an image and return a rotted image or video of rotting process.
+
+    An image is first scaled to match `max_width` and `max_height` as precisely
+    as possible, but this is not guranteed because ffmpeg requires video
+    dimensions to be even.
+
+    Then the image is resaved multiple times.
+
+    Each iteration consists of saving an image PNG using CMYK colormap, then
+    saving it as JPEG using RGB colormap. Additionally, quality of JPEG is
+    sampled everytime within [`min_quality`, `max_quality`]. This avoids
+    early convergence: it happens when image stops degrading.
+
+    After `max_iterations` (or early convergence) are reached, the result is
+    stored to `output_path`.
+
+    Output type (image or video) is inferred from `output_path` extension.
+
+    Args:
+        input_path: Input image path.
+        output_path: Output image/video path.
+        max_iterations: Maximum number of iterations, could be fewer.
+        min_quality: Lower bound of sampled quality.
+        max_quality: Upper bound of sampled quality.
+        framerate: Framerate of video (ignored if output is an image).
+        max_width: Maximum width of the output.
+        max_height: Maximum height of the output.
+    Returns:
+        Output path (same as supplied as argument).
+    """
     # Create temporary directory and compute all the data needed for temporary
     # output
     temp_name_length = len(str(max_iterations))
@@ -55,8 +92,6 @@ def rot(input_path, output_path, framerate, max_iterations, min_quality, max_qua
             logging.info("Otput extension '{:s}', hence outputting image".format(extension))
             resave(output, output_path, 100, 100)
         else:
-
-
             # Video
             logging.info("Otput extension '{:s}', hence outputting video".format(extension))
             cmd = " ".join([
@@ -69,6 +104,9 @@ def rot(input_path, output_path, framerate, max_iterations, min_quality, max_qua
             ])
             logging.info("Executing '{:s}' in shell".format(cmd))
             subprocess.run(cmd, shell=True)
+
+    return output_path
+
 
 def get_image_size(path):
     "Identify geometry using ImageMagick."
@@ -87,6 +125,7 @@ def get_image_size(path):
     height = int(height_regex.findall(output)[0])
 
     return width, height
+
 
 def get_new_image_size(width, height, max_width=None, max_height=None):
     "Get new image size, given max dimensions."
@@ -129,8 +168,9 @@ def resize_image(input, output, width, height):
 
     return output
 
+
 def resave(input, output, min_quality, max_quality):
-    """Resave image witg randomly sampled quality.
+    """Resave image with randomly sampled quality.
 
     Quality is sampled randomly in an interval to avoid early convergence."""
     filename, _ = os.path.splitext(input)
@@ -158,5 +198,7 @@ def resave(input, output, min_quality, max_quality):
 
     return output
 
+
 def file_md5(path):
+    "Compute MD5 sum of a file."
     return hashlib.md5(open(path, "rb").read()).hexdigest()
