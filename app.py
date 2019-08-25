@@ -156,10 +156,10 @@ def get_new_image_size(height, width, config, args):
         scale_factor = min(max_width / width, max_height / height)
     elif args.max_width is None and args.max_height is not None:
         # Use only height
-        scale_factor = max_height / height
+        scale_factor = args.max_height / height
     elif args.max_width is not None and args.max_height is None:
         # Use only width
-        scale_factor = max_width / width
+        scale_factor = args.max_width / width
     elif args.max_width is not None and args.max_height is not None:
         # Use only width
         scale_factor = min(args.max_width / width, args.max_height / height)
@@ -179,11 +179,12 @@ def get_new_image_size(height, width, config, args):
 def resize_image(input, output, width, height):
     "Resize image using ImageMagick."
     # \! is needed to ignore aspect ratio
-    cmd = "magick {:s} -resize {:d}x{:d} -quality 100 {:s}".format(
-        input,
-        width,
-        height,
-        output)
+    cmd = " ".join([
+        "magick {:s}".format(input),
+        "-resize {:d}x{:d}".format(width, height),
+        "-quality {:d}".format(100),
+        "{:s}".format(output)
+    ])
     logging.debug("Executing " + cmd)
     subprocess.run(cmd, shell=True)
     logging.info("Resized, saved to {:s}".format(output))
@@ -195,30 +196,23 @@ def resave(input, output, quality):
     filename, _ = os.path.splitext(input)
     png = filename + ".png"
 
-    cmd = "magick convert {:s} {:s}".format(
-        input,
-        png
-    )
+    cmd = " ".join([
+        "magick convert {:s}".format(input),
+        "-colorspace {:s}".format("CMYK"),
+        "+antialias",
+        "-quality {:d}".format(100),
+        "{:s}".format(png)
+    ])
     subprocess.run(cmd, shell=True)
-    cmd = "magick convert {:s} -quality {:d} {:s}".format(
-        png,
-        quality,
-        output
-    )
+    cmd = " ".join([
+        "magick convert {:s}".format(input),
+        "-colorspace {:s}".format("RGB"),
+        "+antialias",
+        "-quality {:d}".format(quality),
+        "{:s}".format(output)
+    ])
     subprocess.run(cmd, shell=True)
     logging.debug("Saved to {:s}".format(output))
-
-    # convert ${prev_file} \
-    #     -colorspace CMYK \
-    #     -resize $((${max_width} - ${shrink}))x$((${max_height} - ${shrink})) \
-    #     +antialias \
-    #     ${temp_file}
-    # convert ${temp_file} \
-    #     -colorspace RGB \
-    #     -resize ${max_width}x${max_height} \
-    #     +antialias \
-    #     -quality ${quality} \
-    #     ${new_file}
 
     return output
 
