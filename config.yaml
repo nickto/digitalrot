@@ -3,4 +3,5 @@ defaults:
     max_height: 320
     framerate: 30
     max_iterations: 100
-    quality: 95
+    min_quality: 85
+    max_quality: 95

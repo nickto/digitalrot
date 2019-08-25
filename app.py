@@ -9,6 +9,7 @@ import math
 import logging
 from tqdm import tqdm
 import hashlib
+import random
 
 def main():
     logging.basicConfig(level=logging.INFO)
@@ -45,11 +46,19 @@ def main():
         required=False,
         type=int)
 
-    parser.add_argument("-q", "--qulaity",
-        help="JPEG quaity to use for quality degradation (1-100)",
+    parser.add_argument("-minq", "--min-quality",
+        help="min JPEG quaity to use for quality degradation (1-100)",
         default=None,
         metavar="N",
-        dest="quality",
+        dest="min_quality",
+        required=False,
+        type=int)
+
+    parser.add_argument("-maxq", "--max-quality",
+        help="max JPEG quaity to use for quality degradation (1-100)",
+        default=None,
+        metavar="N",
+        dest="max_quality",
         required=False,
         type=int)
 
@@ -91,8 +100,9 @@ def main():
         output = resize_image(input_path, output_path, width, height)
         output_md5 = file_md5(output)
 
-        # Start reesaving
-        quality = get_args_or_default("quality", args, config)
+        # Start resaving
+        min_quality = get_args_or_default("min_quality", args, config)
+        max_quality = get_args_or_default("max_quality", args, config)
         max_iterations = get_args_or_default("max_iterations", args, config)
         for i in tqdm(range(max_iterations)):
             input = output
@@ -101,7 +111,7 @@ def main():
             output_filename = os.path.join(
                 temp_path,
                 temp_name_format.format(i) + ".jpeg")
-            output = resave(input, output_filename, quality)
+            output = resave(input, output_filename, min_quality, max_quality)
             output_md5 = file_md5(output)
 
             if input_md5 == output_md5:
@@ -114,7 +124,7 @@ def main():
         logging.info("Otput extension '{:s}', hence ".format(extension))
         if extension.lower() in ["jpeg", "jpg", "png", "bmp", "tiff", "tif"]:
             # Image
-            resave(output, args.OUTPUT, 100)
+            resave(output, args.OUTPUT, 100, 100)
         else:
             # Image
             raise NotImplementedError()
@@ -191,26 +201,29 @@ def resize_image(input, output, width, height):
 
     return output
 
-def resave(input, output, quality):
-    "Save input as PNG then as JPEG with specified quality."
+def resave(input, output, min_quality, max_quality):
+    "Resave image witg randomly sampled quality."
     filename, _ = os.path.splitext(input)
     png = filename + ".png"
 
     cmd = " ".join([
         "magick convert {:s}".format(input),
+        # "-fill {:s} -draw 'point {:d},{:d}'".format("white" if random.random() > 0.5 else "black", 1, 1),
         "-colorspace {:s}".format("CMYK"),
         "+antialias",
         "-quality {:d}".format(100),
         "{:s}".format(png)
     ])
+    logging.debug("Executing '{:s}' in shell".format(cmd))
     subprocess.run(cmd, shell=True)
     cmd = " ".join([
-        "magick convert {:s}".format(input),
+        "magick convert {:s}".format(png),
         "-colorspace {:s}".format("RGB"),
         "+antialias",
-        "-quality {:d}".format(quality),
+        "-quality {:d}".format(random.randint(min_quality, max_quality)),
         "{:s}".format(output)
     ])
+    logging.debug("Executing '{:s}' in shell".format(cmd))
     subprocess.run(cmd, shell=True)
     logging.debug("Saved to {:s}".format(output))
 
