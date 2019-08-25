@@ -9,6 +9,7 @@ import logging
 from tqdm import tqdm
 import hashlib
 import random
+from typing import Dict
 
 def rot(input_path: str,
         output_path: str,
@@ -17,7 +18,7 @@ def rot(input_path: str,
         max_quality: int,
         framerate: int = None,
         max_width: int = None,
-        max_height: int = None):
+        max_height: int = None) -> Dict:
     """Rot an image and return a rotted image or video of rotting process.
 
     An image is first scaled to match `max_width` and `max_height` as precisely
@@ -46,7 +47,8 @@ def rot(input_path: str,
         max_width: Maximum width of the output.
         max_height: Maximum height of the output.
     Returns:
-        Output path (same as supplied as argument).
+        Dictionary with output path (same as supplied as argument) and number
+        of iterations: `{"output": PATH, iterations: N}`.
     """
     # Create temporary directory and compute all the data needed for temporary
     # output
@@ -105,7 +107,10 @@ def rot(input_path: str,
             logging.info("Executing '{:s}' in shell".format(cmd))
             subprocess.run(cmd, shell=True)
 
-    return output_path
+    return {
+        "output": output_path,
+        "iteratinos": i
+    }
 
 
 def get_image_size(path):
