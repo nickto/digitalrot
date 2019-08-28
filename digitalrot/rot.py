@@ -1,9 +1,7 @@
 import os
-import argparse
 import subprocess
 import re
 import tempfile
-import yaml
 import math
 import logging
 from tqdm import tqdm
@@ -18,7 +16,8 @@ def rot(input_path: str,
         max_quality: int,
         framerate: int = None,
         max_width: int = None,
-        max_height: int = None) -> Dict[str, Union[str, int]]:
+        max_height: int = None,
+        verbose=True) -> Dict[str, Union[str, int]]:
     """Rot an image and return a rotted image or video of rotting process.
 
     An image is first scaled to match `max_width` and `max_height` as precisely
@@ -73,7 +72,7 @@ def rot(input_path: str,
         output_md5 = file_md5(temp_output_path)
 
         # Start resaving
-        for i in tqdm(range(max_iterations)):
+        for i in tqdm(range(max_iterations)) if verbose else range(max_iterations):
             input_path = temp_output_path
             input_md5 = output_md5
 
@@ -99,6 +98,8 @@ def rot(input_path: str,
             logging.info("Otput extension '{:s}', hence outputting video".format(extension))
             cmd = " ".join([
                 "ffmpeg",
+                "-loglevel",
+                "panic",
                 "-framerate {:d}".format(framerate),
                 "-f image2",
                 "-i {:s}".format(os.path.join(temp_path, "%0{:d}d.jpeg".format(temp_name_length))),
@@ -150,8 +151,10 @@ def get_new_image_size(width: int,
         # Use only width
         scale_factor = min(max_width / width, max_height / height)
 
-    width = math.floor(scale_factor * width)
-    height = math.floor(scale_factor * height)
+    # Do not upscale
+    if scale_factor < 1:
+        width = math.floor(scale_factor * width)
+        height = math.floor(scale_factor * height)
 
     # ffmpeg requires both width and height to be even
     if width % 2 != 0:
@@ -167,7 +170,7 @@ def resize_image(input: str, output: str, width: int, height: int) -> str:
     # \! is needed to ignore aspect ratio
     cmd = " ".join([
         "magick {:s}".format(input),
-        "-resize {:d}x{:d}\!".format(width, height),
+        "-resize {:d}x{:d}!".format(width, height),
         "-quality {:d}".format(100),
         "{:s}".format(output)
     ])
@@ -183,27 +186,27 @@ def resave(input: str, output: str, min_quality: int, max_quality: int) -> str:
 
     Quality is sampled randomly in an interval to avoid early convergence."""
     filename, _ = os.path.splitext(input)
-    png = filename + ".png"
 
-    cmd = " ".join([
-        "magick convert {:s}".format(input),
-        "-colorspace {:s}".format("CMYK"),
-        "+antialias",
-        "-quality {:d}".format(100),
-        "{:s}".format(png)
-    ])
-    logging.debug("Executing '{:s}' in shell".format(cmd))
-    subprocess.run(cmd, shell=True)
-    cmd = " ".join([
-        "magick convert {:s}".format(png),
-        "-colorspace {:s}".format("RGB"),
-        "+antialias",
-        "-quality {:d}".format(random.randint(min_quality, max_quality)),
-        "{:s}".format(output)
-    ])
-    logging.debug("Executing '{:s}' in shell".format(cmd))
-    subprocess.run(cmd, shell=True)
-    logging.debug("Saved to {:s}".format(output))
+    with tempfile.NamedTemporaryFile(suffix=".png") as png:
+        cmd = " ".join([
+            "magick convert {:s}".format(input),
+            "-colorspace {:s}".format("CMYK"),
+            "+antialias",
+            "-quality {:d}".format(100),
+            "{:s}".format(png.name)
+        ])
+        logging.debug("Executing '{:s}' in shell".format(cmd))
+        subprocess.run(cmd, shell=True)
+        cmd = " ".join([
+            "magick convert {:s}".format(png.name),
+            "-colorspace {:s}".format("RGB"),
+            "+antialias",
+            "-quality {:d}".format(random.randint(min_quality, max_quality)),
+            "{:s}".format(output)
+        ])
+        logging.debug("Executing '{:s}' in shell".format(cmd))
+        subprocess.run(cmd, shell=True)
+        logging.debug("Saved to {:s}".format(output))
 
     return output
 
