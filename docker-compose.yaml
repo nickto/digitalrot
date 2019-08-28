@@ -1,0 +1,9 @@
+version: '3'
+services:
+    digitalrot:
+        build: .
+        volumes:
+            - .:/app
+        working_dir: /app
+        entrypoint:
+            - app.py
